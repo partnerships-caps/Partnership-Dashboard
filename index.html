@@ -1,0 +1,735 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>OEM Partnership Dashboard</title>
+<style>
+  :root { color-scheme: light; }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+    background: #f7f7f5; color: #1f1f1f; font-size: 14px; line-height: 1.45;
+  }
+  .container { padding: 22px 24px 60px; max-width: 1300px; margin: 0 auto; }
+  h1 { font-size: 22px; margin: 0 0 4px; font-weight: 600; }
+  .subtitle { color: #6b6b6b; margin: 0 0 22px; font-size: 13px; }
+  .top-tabs { display: flex; gap: 4px; border-bottom: 1px solid #e1e1de; margin-bottom: 22px; }
+  .top-tab {
+    padding: 10px 16px; cursor: pointer; font-weight: 500; color: #6b6b6b;
+    border-bottom: 2px solid transparent; margin-bottom: -1px; user-select: none; font-size: 14px;
+  }
+  .top-tab.active { color: #c15f3c; border-bottom-color: #c15f3c; }
+  .view { display: none; }
+  .view.active { display: block; }
+  .stages { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; margin-bottom: 22px; }
+  .stage-card {
+    background: #fff; border: 1px solid #ececea; border-radius: 10px; padding: 14px 16px;
+    cursor: pointer; transition: all 0.12s ease; position: relative; border-top: 4px solid #d6d6d3;
+  }
+  .stage-card:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.06); transform: translateY(-1px); }
+  .stage-card.active { border-color: #c15f3c; box-shadow: 0 0 0 2px #c15f3c33; }
+  .stage-card.applied { border-top-color: #3a78c8; }
+  .stage-card.in-process { border-top-color: #e0a83a; }
+  .stage-card.completed { border-top-color: #3aa83a; }
+  .stage-card.rejected { border-top-color: #cf4d31; }
+  .stage-card .label { color: #6b6b6b; font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; font-weight: 600; }
+  .stage-card .value { font-size: 26px; font-weight: 600; margin-top: 4px; line-height: 1.1; }
+  .stage-card .meaning { color: #6b6b6b; font-size: 12px; margin-top: 6px; }
+  .stage-card .meaning strong { color: #1f1f1f; }
+  .filter-row { display: flex; gap: 12px; align-items: center; margin-bottom: 16px; flex-wrap: wrap; }
+  .search-box {
+    flex: 1; min-width: 220px; padding: 8px 12px; border: 1px solid #d6d6d3; border-radius: 8px;
+    font-size: 14px; background: #fff;
+  }
+  .search-box:focus { outline: none; border-color: #c15f3c; box-shadow: 0 0 0 2px #c15f3c22; }
+  .filter-info { color: #6b6b6b; font-size: 13px; }
+  .oem-section { margin-bottom: 28px; }
+  .section-header {
+    display: flex; align-items: center; gap: 10px; margin: 16px 0 12px;
+    padding-bottom: 6px; border-bottom: 1px solid #ececea;
+  }
+  .section-header h2 { font-size: 16px; margin: 0; font-weight: 600; }
+  .section-header .count { color: #6b6b6b; font-size: 13px; }
+  .stage-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+  .stage-dot.applied { background: #3a78c8; }
+  .stage-dot.in-process { background: #e0a83a; }
+  .stage-dot.completed { background: #3aa83a; }
+  .stage-dot.rejected { background: #cf4d31; }
+  .oem-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; }
+  .oem-card {
+    background: #fff; border: 1px solid #ececea; border-radius: 10px; padding: 14px;
+    cursor: pointer; transition: all 0.12s ease;
+  }
+  .oem-card:hover { border-color: #c15f3c; box-shadow: 0 2px 8px rgba(193,95,60,0.1); }
+  .oem-card .oem-name { font-weight: 600; font-size: 15px; margin-bottom: 4px; }
+  .oem-card .oem-desc {
+    color: #6b6b6b; font-size: 12px; line-height: 1.4;
+    display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
+  }
+  .oem-card .meta-row { margin-top: 10px; display: flex; gap: 6px; flex-wrap: wrap; align-items: center; font-size: 12px; color: #6b6b6b; }
+  .pill { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 500; line-height: 1.5; }
+  .pill-green { background: #e3f5e3; color: #1f6f1f; }
+  .pill-red { background: #fde6e3; color: #b1331e; }
+  .pill-amber { background: #fdf1d8; color: #8a5a00; }
+  .pill-blue { background: #e3edfb; color: #1f4f9f; }
+  .pill-grey { background: #ececea; color: #555; }
+  .modal-backdrop {
+    position: fixed; inset: 0; background: rgba(20, 20, 20, 0.45);
+    display: none; align-items: flex-start; justify-content: center; padding: 40px 16px;
+    z-index: 100; overflow-y: auto;
+  }
+  .modal-backdrop.open { display: flex; }
+  .modal {
+    background: #fff; border-radius: 12px; max-width: 720px; width: 100%;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.2); overflow: hidden;
+  }
+  .modal-header { padding: 20px 24px 14px; border-bottom: 1px solid #ececea; display: flex; align-items: flex-start; gap: 12px; }
+  .modal-header h2 { margin: 0; font-size: 18px; font-weight: 600; flex: 1; }
+  .modal-header .close-btn { background: none; border: none; font-size: 24px; color: #6b6b6b; cursor: pointer; line-height: 1; padding: 0 4px; }
+  .modal-header .close-btn:hover { color: #1f1f1f; }
+  .modal-body { padding: 18px 24px 24px; }
+  .modal-section { margin-bottom: 16px; }
+  .modal-section h3 {
+    font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: #6b6b6b;
+    margin: 0 0 6px; font-weight: 600;
+  }
+  .modal-section .content { font-size: 14px; }
+  .quote-box { background: #fff8f3; border: 1px solid #f0d6c5; border-radius: 8px; padding: 14px 16px; margin: 6px 0; }
+  .quote-box h4 { margin: 0 0 8px; font-size: 13px; font-weight: 600; color: #c15f3c; }
+  .quote-box .step { font-size: 13px; margin-bottom: 6px; padding-left: 16px; position: relative; }
+  .quote-box .step::before { content: ""; position: absolute; left: 4px; top: 7px; width: 5px; height: 5px; background: #c15f3c; border-radius: 50%; }
+  .quote-box .step.disabled { color: #999; }
+  .quote-box .step.disabled::before { background: #ccc; }
+  .field-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .field { font-size: 13px; }
+  .field .field-label { color: #6b6b6b; font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 2px; font-weight: 600; }
+  .field .field-value { word-break: break-word; }
+  a { color: #c15f3c; text-decoration: none; word-break: break-word; }
+  a:hover { text-decoration: underline; }
+  .empty { text-align: center; padding: 30px; color: #999; font-size: 13px; }
+  .solution-search { background: #fff; border: 1px solid #ececea; border-radius: 12px; padding: 18px 20px; margin-bottom: 20px; }
+  .solution-search h2 { margin: 0 0 4px; font-size: 16px; font-weight: 600; }
+  .solution-search .hint { color: #6b6b6b; font-size: 13px; margin: 0 0 14px; }
+  .solution-search-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .solution-input { flex: 1; min-width: 240px; padding: 10px 14px; border: 1px solid #d6d6d3; border-radius: 8px; font-size: 15px; background: #fff; }
+  .solution-input:focus { outline: none; border-color: #c15f3c; box-shadow: 0 0 0 2px #c15f3c22; }
+  .btn { padding: 10px 18px; border-radius: 8px; border: none; background: #c15f3c; color: #fff; font-size: 14px; font-weight: 500; cursor: pointer; }
+  .btn:hover { background: #a84e30; }
+  .btn:disabled { background: #d6d6d3; cursor: not-allowed; }
+  .toggle-row { display: flex; gap: 16px; align-items: center; margin-top: 12px; font-size: 13px; color: #6b6b6b; flex-wrap: wrap; }
+  .toggle-row label { cursor: pointer; user-select: none; }
+  .toggle-row input[type=radio] { margin-right: 4px; }
+  .examples { margin-top: 8px; font-size: 12px; color: #6b6b6b; }
+  .examples .ex { display: inline-block; margin: 2px 6px 2px 0; padding: 2px 8px; background: #f0f0ee; border-radius: 999px; cursor: pointer; color: #4a4a4a; }
+  .examples .ex:hover { background: #e6e6e3; }
+  .match-card { background: #fff; border: 1px solid #ececea; border-radius: 10px; padding: 14px 16px; margin-bottom: 10px; cursor: pointer; transition: all 0.12s ease; }
+  .match-card:hover { border-color: #c15f3c; box-shadow: 0 2px 8px rgba(193,95,60,0.1); }
+  .match-card .match-head { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; flex-wrap: wrap; }
+  .match-card .match-name { font-weight: 600; font-size: 15px; }
+  .match-card .match-reason { color: #1f1f1f; font-size: 13px; margin: 4px 0; }
+  .match-card .match-desc { color: #6b6b6b; font-size: 12px; line-height: 1.4; }
+  .footer { color: #999; font-size: 12px; text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #ececea; }
+  .pill-category { background: #f0e9fb; color: #5b3a9a; }
+  .pill-orange { background: #ffe9d6; color: #a04e1a; }
+  .creds-box {
+    background: #f5f9ff; border: 1px solid #d9e6f8; border-radius: 8px; padding: 12px 14px; margin: 8px 0;
+  }
+  .creds-box h4 { margin: 0 0 8px; font-size: 12px; color: #1f4f9f; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; }
+  .creds-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 6px; font-size: 13px; }
+  .creds-row .creds-label { color: #6b6b6b; min-width: 70px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em; font-weight: 600; }
+  .creds-row .creds-val { font-family: ui-monospace, "SF Mono", Menlo, monospace; background: #fff; border: 1px solid #d6d6d3; border-radius: 4px; padding: 2px 8px; font-size: 12px; }
+  .pw-toggle { background: none; border: 1px solid #d6d6d3; padding: 2px 8px; border-radius: 4px; font-size: 11px; color: #6b6b6b; cursor: pointer; }
+  .pw-toggle:hover { background: #f0f0ee; color: #1f1f1f; }
+  .copy-btn { background: none; border: 1px solid #d6d6d3; padding: 2px 8px; border-radius: 4px; font-size: 11px; color: #6b6b6b; cursor: pointer; }
+  .copy-btn:hover { background: #f0f0ee; color: #1f1f1f; }
+  .cred-warning {
+    background: #fff8f3; border-left: 3px solid #c15f3c; padding: 8px 12px; margin-top: 6px;
+    font-size: 11px; color: #8a4e30;
+  }
+  .loader { text-align: center; padding: 40px; color: #6b6b6b; }
+  .loader .spinner { display: inline-block; width: 18px; height: 18px; border: 2px solid #d6d6d3; border-top-color: #c15f3c; border-radius: 50%; animation: spin 0.8s linear infinite; vertical-align: middle; margin-right: 8px; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  @media (max-width: 720px) {
+    .stages { grid-template-columns: repeat(2, 1fr); }
+    .field-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>OEM Partnership Dashboard</h1>
+  <p class="subtitle">Static snapshot of OEM partnerships from HubSpot. <span id="snapshot-info"></span></p>
+
+  <div class="top-tabs">
+    <div class="top-tab active" data-view="view-stage">Browse by stage</div>
+    <div class="top-tab" data-view="view-solution">Find by solution</div>
+  </div>
+
+  <div class="view active" id="view-stage">
+    <div class="stages" id="stage-cards"></div>
+    <div class="filter-row">
+      <input id="search" class="search-box" type="search" placeholder="Search OEMs by name or description…">
+      <div class="filter-info" id="filter-info"></div>
+    </div>
+    <div id="content"><div class="loader"><span class="spinner"></span>Loading data…</div></div>
+  </div>
+
+  <div class="view" id="view-solution">
+    <div class="solution-search">
+      <h2>Find OEM partners by solution</h2>
+      <p class="hint">Type what you need (e.g. "Rack Mount Firewall", "CRM platform", "endpoint backup", "SIEM"). Searches OEM descriptions for matching keywords and concept-related terms.</p>
+      <div class="solution-search-row">
+        <input id="solution-input" class="solution-input" type="text" placeholder="What solution are you looking for?">
+        <button id="solution-btn" class="btn">Find partners</button>
+      </div>
+      <div class="examples">
+        Try:
+        <span class="ex" data-q="Rack Mount Firewall">Rack Mount Firewall</span>
+        <span class="ex" data-q="endpoint backup">endpoint backup</span>
+        <span class="ex" data-q="CRM platform">CRM platform</span>
+        <span class="ex" data-q="SIEM">SIEM</span>
+        <span class="ex" data-q="cloud infrastructure">cloud infrastructure</span>
+        <span class="ex" data-q="identity management">identity management</span>
+      </div>
+      <div class="toggle-row">
+        <span>Search across:</span>
+        <label><input type="radio" name="scope" value="completed" checked> Active partners only (Completed)</label>
+        <label><input type="radio" name="scope" value="active-process"> Active + In process</label>
+        <label><input type="radio" name="scope" value="all"> All OEMs</label>
+      </div>
+    </div>
+    <div id="solution-results"></div>
+  </div>
+
+  <div class="footer" id="footer"></div>
+</div>
+
+<div class="modal-backdrop" id="modal" onclick="if(event.target===this)closeModal()">
+  <div class="modal" id="modal-content"></div>
+</div>
+
+<script>
+// =================================================================
+// Configuration
+// =================================================================
+// Optional: if you deploy a backend (e.g. Vercel /api/claude.js) that
+// proxies the Anthropic API, paste its URL here. Leave empty to use
+// the built-in keyword/synonym matcher (fully offline, no API key).
+// Example: const CLAUDE_API_URL = "https://your-app.vercel.app/api/claude";
+const CLAUDE_API_URL = "";
+const HUBSPOT_HOST = "https://app-na2.hubspot.com";
+const ACCOUNT_ID = "243046792";
+
+// SECURITY:
+// Set this to FALSE before deploying to a public host (GitHub Pages, etc.).
+// When false, the dashboard hides portal emails and passwords entirely so
+// they don't leak to anyone with the URL. Drive links are also dropped.
+// Keep TRUE only when running this locally or on a private host where
+// only authorized teammates can see the page.
+const SHOW_CREDENTIALS = true;
+
+const STAGES = [
+  { id: "1", label: "Applied", cls: "applied", meaning: "Submitted, awaiting OEM review", partnerStatus: "Not yet a partner" },
+  { id: "2", label: "In process", cls: "in-process", meaning: "Actively progressing through approval", partnerStatus: "Becoming a partner" },
+  { id: "3", label: "Completed", cls: "completed", meaning: "Approved — active reseller / partner", partnerStatus: "Active partner" },
+  { id: "4", label: "Rejected", cls: "rejected", meaning: "Did not move forward", partnerStatus: "Not a partner" }
+];
+const STAGE_BY_ID = Object.fromEntries(STAGES.map(s => [s.id, s]));
+
+// Synonym map for offline keyword search (used when CLAUDE_API_URL is empty)
+const SYNONYMS = {
+  "firewall": ["firewall", "firewalls", "network security", "secure networking", "network protection", "perimeter"],
+  "rack mount": ["network", "appliance", "hardware", "infrastructure", "router", "switch"],
+  "crm": ["crm", "customer relationship", "salesforce", "marketing automation", "customer service", "customer engagement"],
+  "siem": ["siem", "security information", "event management", "splunk", "log management", "observability"],
+  "edr": ["edr", "endpoint protection", "endpoint detection", "xdr", "endpoint security"],
+  "endpoint": ["endpoint", "edr", "xdr", "device management", "patch management"],
+  "backup": ["backup", "disaster recovery", "data protection", "archiving", "recovery"],
+  "cloud": ["cloud", "hybrid", "multi-cloud", "saas", "iaas", "paas", "infrastructure"],
+  "identity": ["identity", "iam", "sso", "single sign-on", "mfa", "multi-factor", "authentication", "access management"],
+  "hcm": ["hcm", "human capital", "payroll", "hr", "human resources", "workforce"],
+  "erp": ["erp", "enterprise resource planning", "finance", "supply chain"],
+  "itsm": ["itsm", "service management", "service desk", "incident", "ticket"],
+  "monitoring": ["monitoring", "observability", "apm", "performance monitoring", "logs"],
+  "vulnerability": ["vulnerability", "vulnerabilities", "vuln", "scanning", "risk", "compliance"],
+  "data": ["data", "analytics", "data integration", "data management", "etl"],
+  "asset management": ["asset management", "eam", "cmms", "maintenance"],
+  "phishing": ["phishing", "security awareness", "training"],
+  "container": ["container", "kubernetes", "openshift", "docker"],
+  "database": ["database", "rdbms", "sql", "data platform"],
+  "collaboration": ["collaboration", "project management", "productivity"],
+  "wordpress": ["wordpress", "cms", "content management"],
+  "legal": ["legal", "law firm", "case management", "contract"],
+  "education": ["education", "learning management", "lms", "training", "higher education"],
+  "wireless": ["wireless", "wi-fi", "wifi", "wireless infrastructure"],
+  "router": ["router", "switch", "switches", "networking", "network appliance"]
+};
+
+let DATA = { tickets: [], owners: {}, snapshotDate: "" };
+
+// =================================================================
+// Helpers
+// =================================================================
+function escapeHtml(s) {
+  if (s == null) return "";
+  return String(s).replace(/[&<>"']/g, ch => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[ch]));
+}
+function fmtDate(iso) {
+  if (!iso) return "—";
+  const d = new Date(iso);
+  return isNaN(d.getTime()) ? "—" : d.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
+}
+function ownerName(id) {
+  if (!id) return "Unassigned";
+  return DATA.owners[String(id)] || ("Owner #" + id);
+}
+function ticketUrl(id) { return `${HUBSPOT_HOST}/contacts/${ACCOUNT_ID}/record/0-5/${id}`; }
+function parsePOC(poc) {
+  if (!poc) return null;
+  const text = String(poc).trim();
+  const m = text.match(/<([^>]+)>/) || text.match(/([\w.+-]+@[\w-]+\.[\w.-]+)/);
+  if (m) {
+    const email = m[1];
+    const name = text.replace(/<[^>]+>/, "").trim() || email;
+    return { name, email, raw: text };
+  }
+  return { name: text, email: null, raw: text };
+}
+
+// =================================================================
+// Render — stage view
+// =================================================================
+let activeStage = "all";
+
+function renderStageCards() {
+  const counts = { "1": 0, "2": 0, "3": 0, "4": 0 };
+  DATA.tickets.forEach(t => { if (counts[t.stage] != null) counts[t.stage]++; });
+  const total = DATA.tickets.length;
+  const items = [
+    { id: "all", label: "All partnerships", cls: "", meaning: "Show every OEM in every stage", value: total }
+  ].concat(STAGES.map(s => ({ id: s.id, label: s.label, cls: s.cls, meaning: s.meaning, partnerStatus: s.partnerStatus, value: counts[s.id] })));
+
+  document.getElementById("stage-cards").innerHTML = items.map(it => `
+    <div class="stage-card ${it.cls} ${activeStage === it.id ? 'active' : ''}" data-stage="${it.id}">
+      <div class="label">${escapeHtml(it.label)}</div>
+      <div class="value">${it.value}</div>
+      <div class="meaning">${it.partnerStatus ? `<strong>${escapeHtml(it.partnerStatus)}</strong> — ` : ""}${escapeHtml(it.meaning)}</div>
+    </div>
+  `).join("");
+  document.querySelectorAll(".stage-card").forEach(el => {
+    el.addEventListener("click", () => { activeStage = el.dataset.stage; renderStageCards(); renderContent(); });
+  });
+}
+
+function renderContent() {
+  const search = (document.getElementById("search").value || "").toLowerCase().trim();
+  const filtered = DATA.tickets.filter(t => {
+    if (activeStage !== "all" && t.stage !== activeStage) return false;
+    if (search) {
+      const hay = ((t.subject || "") + " " + (t.content || "")).toLowerCase();
+      if (!hay.includes(search)) return false;
+    }
+    return true;
+  });
+
+  document.getElementById("filter-info").textContent =
+    `Showing ${filtered.length} of ${DATA.tickets.length} OEM partnerships`;
+
+  const groupOrder = activeStage === "all" ? ["2", "1", "3", "4"] : [activeStage];
+  const grouped = {};
+  filtered.forEach(t => { (grouped[t.stage] = grouped[t.stage] || []).push(t); });
+
+  const html = groupOrder.map(stageId => {
+    const stage = STAGE_BY_ID[stageId];
+    const list = grouped[stageId] || [];
+    if (list.length === 0 && activeStage !== "all") return `<div class="empty">No OEMs in this stage match the current search.</div>`;
+    if (list.length === 0) return "";
+    return `
+      <div class="oem-section">
+        <div class="section-header">
+          <span class="stage-dot ${stage.cls}"></span>
+          <h2>${escapeHtml(stage.label)}</h2>
+          <span class="count">— ${escapeHtml(stage.partnerStatus)} · ${list.length} OEM${list.length !== 1 ? "s" : ""}</span>
+        </div>
+        <div class="oem-grid">${list.map(t => oemCard(t)).join("")}</div>
+      </div>`;
+  }).join("");
+
+  document.getElementById("content").innerHTML = html || `<div class="empty">No OEM partnerships match your filters.</div>`;
+  document.querySelectorAll(".oem-card").forEach(el => {
+    el.addEventListener("click", () => openModal(el.dataset.id));
+  });
+}
+
+function oemCard(t) {
+  const stage = STAGE_BY_ID[t.stage];
+  const desc = t.content ? escapeHtml(t.content) : (t.sheetNotes ? escapeHtml(t.sheetNotes) : '<em style="color:#aaa;">No description</em>');
+  const owner = ownerName(t.owner);
+  const poc = parsePOC(t.poc);
+  const stagePillCls = !stage ? "pill-grey" :
+    stage.cls === "in-process" ? "pill-amber" :
+    stage.cls === "completed" ? "pill-green" :
+    stage.cls === "rejected" ? "pill-red" : "pill-blue";
+  return `
+    <div class="oem-card" data-id="${t.id}">
+      <div class="oem-name">${escapeHtml(t.subject || "(no name)")}</div>
+      <div class="oem-desc">${desc}</div>
+      <div class="meta-row">
+        ${stage ? `<span class="pill ${stagePillCls}">${escapeHtml(stage.label)}</span>` : ""}
+        ${t.category ? `<span class="pill pill-category">${escapeHtml(t.category)}</span>` : ""}
+        ${SHOW_CREDENTIALS && t.portalEmail ? `<span class="pill pill-orange" title="Portal credentials available">🔑 Creds</span>` : ""}
+        ${SHOW_CREDENTIALS && t.driveLink ? `<span class="pill pill-blue" title="Documents available">📁 Docs</span>` : ""}
+        ${!t.inHubspot ? `<span class="pill pill-grey" title="Sheet only">Sheet only</span>` : ""}
+      </div>
+      <div class="meta-row">
+        <span>Owner: ${escapeHtml(owner)}</span>
+        ${poc ? `<span>· POC: ${escapeHtml(poc.name)}</span>` : ""}
+      </div>
+    </div>`;
+}
+
+function openModal(id) {
+  const t = DATA.tickets.find(x => String(x.id) === String(id));
+  if (!t) return;
+  const stage = STAGE_BY_ID[t.stage];
+  const owner = ownerName(t.owner);
+  const poc = parsePOC(t.poc);
+  const portal = (t.portal || "").trim();
+  const docs = (t.docs || "").trim();
+
+  const steps = [];
+  if (poc && poc.email) steps.push(`<div class="step"><strong>1.</strong> Email the OEM POC <a href="mailto:${encodeURIComponent(poc.email)}">${escapeHtml(poc.name)} (${escapeHtml(poc.email)})</a> requesting a quote.</div>`);
+  else if (poc) steps.push(`<div class="step"><strong>1.</strong> Reach out to OEM POC <strong>${escapeHtml(poc.name)}</strong> for a quote.</div>`);
+  else steps.push(`<div class="step disabled"><strong>1.</strong> No OEM POC recorded — add one in HubSpot before requesting a quote.</div>`);
+
+  if (portal) steps.push(`<div class="step"><strong>2.</strong> Submit the quote request through the partner portal: <a href="${escapeHtml(portal)}" target="_blank" rel="noopener">${escapeHtml(portal)}</a></div>`);
+  else steps.push(`<div class="step disabled"><strong>2.</strong> No partner portal link recorded.</div>`);
+
+  steps.push(`<div class="step"><strong>3.</strong> Loop in <strong>${escapeHtml(owner)}</strong> internally — they own this partnership in HubSpot.</div>`);
+
+  if (t.stage === "3") steps.push(`<div class="step"><strong>4.</strong> Partnership is <strong>active</strong> — quotes can be requested directly.</div>`);
+  else if (t.stage === "4") steps.push(`<div class="step disabled"><strong>4.</strong> Partnership is <strong>rejected</strong>. Reason: ${escapeHtml(t.rejected || "not recorded")}.</div>`);
+  else steps.push(`<div class="step"><strong>4.</strong> Partnership is <strong>${escapeHtml(stage?.label || "—")}</strong> — confirm with the internal owner before quoting.</div>`);
+
+  const docLinks = (() => {
+    if (!docs) return '<em style="color:#aaa;">No documents recorded</em>';
+    const ids = docs.split(/[\s,;]+/).filter(Boolean);
+    return ids.map((d, i) => `Document ${i+1}: <code>${escapeHtml(d)}</code>`).join("<br>") + "<br><span style='color:#999; font-size:11px;'>(Document IDs reference HubSpot file uploads — open the OEM record in HubSpot to view.)</span>";
+  })();
+
+  const stagePillCls = !stage ? "pill-grey" :
+    stage.cls === "in-process" ? "pill-amber" :
+    stage.cls === "completed" ? "pill-green" :
+    stage.cls === "rejected" ? "pill-red" : "pill-blue";
+
+  document.getElementById("modal-content").innerHTML = `
+    <div class="modal-header">
+      <div style="flex:1;">
+        <h2>${escapeHtml(t.subject || "(no name)")}</h2>
+        <div style="margin-top:6px;">
+          <span class="pill ${stagePillCls}">${escapeHtml(stage?.label || "—")}</span>
+          <span style="color:#6b6b6b; font-size:12px; margin-left:6px;">${escapeHtml(stage?.partnerStatus || "")}</span>
+        </div>
+      </div>
+      <button class="close-btn" onclick="closeModal()">×</button>
+    </div>
+    <div class="modal-body">
+      ${t.content ? `<div class="modal-section"><h3>What they do</h3><div class="content">${escapeHtml(t.content)}</div></div>` : ""}
+
+      <div class="modal-section">
+        <h3>Quote extraction procedure</h3>
+        <div class="quote-box">
+          <h4>How to get a quote from this OEM</h4>
+          ${steps.join("")}
+        </div>
+      </div>
+
+      <div class="modal-section">
+        <h3>Contacts</h3>
+        <div class="field-grid">
+          <div class="field"><div class="field-label">OEM POC (external)</div><div class="field-value">${poc ? `${escapeHtml(poc.name)}${poc.email ? `<br><a href="mailto:${encodeURIComponent(poc.email)}">${escapeHtml(poc.email)}</a>` : ""}` : '<em style="color:#aaa;">Not recorded</em>'}</div></div>
+          <div class="field"><div class="field-label">Internal owner (whom to talk to)</div><div class="field-value">${escapeHtml(owner)}</div></div>
+        </div>
+      </div>
+
+      <div class="modal-section">
+        <h3>Resources</h3>
+        <div class="field-grid">
+          <div class="field"><div class="field-label">Partner portal</div><div class="field-value">${portal ? `<a href="${escapeHtml(portal)}" target="_blank" rel="noopener">${escapeHtml(portal)}</a>` : '<em style="color:#aaa;">Not recorded</em>'}</div></div>
+          <div class="field"><div class="field-label">HubSpot documents</div><div class="field-value">${docLinks}</div></div>
+        </div>
+        ${SHOW_CREDENTIALS && t.driveLink ? `
+          <div class="field" style="margin-top:10px;"><div class="field-label">Google Drive folder</div><div class="field-value"><a href="${escapeHtml(t.driveLink)}" target="_blank" rel="noopener">${escapeHtml(t.driveLink)}</a></div></div>
+        ` : ""}
+      </div>
+
+      ${SHOW_CREDENTIALS && (t.portalEmail || t.portalPassword) ? `
+        <div class="modal-section">
+          <h3>Portal login credentials</h3>
+          <div class="creds-box">
+            <h4>Shared partnership account</h4>
+            ${t.portalEmail ? `
+              <div class="creds-row">
+                <span class="creds-label">Email</span>
+                <span class="creds-val" id="cred-email-${t.id}">${escapeHtml(t.portalEmail)}</span>
+                <button class="copy-btn" onclick="copyText('${escapeHtml(t.portalEmail).replace(/'/g, "&#39;")}', this)">Copy</button>
+              </div>` : ""}
+            ${t.portalPassword ? `
+              <div class="creds-row">
+                <span class="creds-label">Password</span>
+                <span class="creds-val" id="cred-pw-${t.id}">${"•".repeat(Math.min(t.portalPassword.length, 16))}</span>
+                <button class="pw-toggle" data-id="${t.id}" data-pw="${escapeHtml(t.portalPassword).replace(/"/g, '&quot;')}">Reveal</button>
+                <button class="copy-btn" onclick="copyText(${JSON.stringify(t.portalPassword)}, this)">Copy</button>
+              </div>` : ""}
+            <div class="cred-warning">⚠ These credentials are visible because <code>SHOW_CREDENTIALS = true</code>. Set it to <code>false</code> in <code>index.html</code> before deploying publicly.</div>
+          </div>
+        </div>` : ""}
+
+      ${t.category || t.sheetStatus || t.sheetNotes ? `
+        <div class="modal-section">
+          <h3>From the Tech Partnerships sheet</h3>
+          <div class="field-grid">
+            ${t.category ? `<div class="field"><div class="field-label">Category</div><div class="field-value">${escapeHtml(t.category)}</div></div>` : ""}
+            ${t.sheetStatus ? `<div class="field"><div class="field-label">Sheet status</div><div class="field-value">${escapeHtml(t.sheetStatus)}</div></div>` : ""}
+          </div>
+          ${t.sheetNotes ? `<div class="field" style="margin-top:10px;"><div class="field-label">Sheet notes</div><div class="field-value">${escapeHtml(t.sheetNotes)}</div></div>` : ""}
+        </div>
+      ` : ""}
+
+      ${t.stage === "4" ? `<div class="modal-section"><h3>Rejection reason</h3><div class="content" style="color:#b1331e;">${escapeHtml(t.rejected || "Not recorded")}</div></div>` : ""}
+
+      <div class="modal-section">
+        <h3>Last modified</h3>
+        <div class="content">${fmtDate(t.modified)}</div>
+      </div>
+
+      <div class="modal-section">
+        <h3>HubSpot</h3>
+        <div class="content"><a href="${ticketUrl(t.id)}" target="_blank" rel="noopener">Open this OEM partnership in HubSpot ↗</a></div>
+      </div>
+    </div>`;
+  document.getElementById("modal").classList.add("open");
+  // Wire password reveal toggle
+  document.querySelectorAll(".pw-toggle").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const id = btn.dataset.id;
+      const pw = btn.dataset.pw;
+      const span = document.getElementById("cred-pw-" + id);
+      if (!span) return;
+      if (btn.textContent === "Reveal") {
+        span.textContent = pw;
+        btn.textContent = "Hide";
+      } else {
+        span.textContent = "•".repeat(Math.min(pw.length, 16));
+        btn.textContent = "Reveal";
+      }
+    });
+  });
+}
+function closeModal() { document.getElementById("modal").classList.remove("open"); }
+document.addEventListener("keydown", e => { if (e.key === "Escape") closeModal(); });
+
+function copyText(text, btn) {
+  try {
+    navigator.clipboard.writeText(text).then(() => {
+      const orig = btn.textContent;
+      btn.textContent = "Copied ✓";
+      setTimeout(() => { btn.textContent = orig; }, 1200);
+    });
+  } catch (e) {
+    console.warn("Copy failed", e);
+  }
+}
+
+// =================================================================
+// Solution search — keyword + synonym matcher (offline) OR Claude (online)
+// =================================================================
+function expandQuery(q) {
+  const lc = q.toLowerCase();
+  const tokens = lc.split(/[\s,;]+/).filter(t => t.length >= 2);
+  const expanded = new Set(tokens);
+  // Add full phrase
+  expanded.add(lc);
+  // Add synonyms for any matching key
+  for (const [key, syns] of Object.entries(SYNONYMS)) {
+    if (lc.includes(key)) syns.forEach(s => expanded.add(s.toLowerCase()));
+  }
+  // Add synonyms for individual tokens
+  tokens.forEach(tok => {
+    for (const [key, syns] of Object.entries(SYNONYMS)) {
+      if (key === tok || key.includes(tok) || tok.includes(key)) syns.forEach(s => expanded.add(s.toLowerCase()));
+    }
+  });
+  return Array.from(expanded);
+}
+
+function offlineMatch(query, scope) {
+  const candidates = DATA.tickets.filter(t => matchesScope(t.stage, scope));
+  const expanded = expandQuery(query);
+
+  const results = candidates.map(t => {
+    const hay = ((t.subject || "") + " " + (t.content || "")).toLowerCase();
+    let hits = 0;
+    let hitTerms = new Set();
+    expanded.forEach(term => {
+      if (hay.includes(term)) {
+        hits++;
+        hitTerms.add(term);
+      }
+    });
+    return { ticket: t, score: hits, hitTerms: Array.from(hitTerms) };
+  }).filter(r => r.score > 0)
+    .sort((a, b) => b.score - a.score);
+
+  return results.map(r => ({
+    id: r.ticket.id,
+    match_quality: r.score >= 2 ? "strong" : "partial",
+    reason: `Mentions ${r.hitTerms.slice(0, 3).map(t => `"${t}"`).join(", ")} in their offering.`
+  }));
+}
+
+async function claudeMatch(query, scope) {
+  const candidates = DATA.tickets.filter(t => matchesScope(t.stage, scope));
+  const data = candidates.map(t => ({
+    id: t.id,
+    name: t.subject,
+    description: (t.content || "").slice(0, 600)
+  }));
+  const resp = await fetch(CLAUDE_API_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ query, oems: data })
+  });
+  if (!resp.ok) throw new Error("Backend returned " + resp.status);
+  const json = await resp.json();
+  if (!json || !Array.isArray(json.matches)) throw new Error("Unexpected response shape");
+  return json.matches;
+}
+
+function matchesScope(stageId, scope) {
+  if (scope === "all") return true;
+  if (scope === "completed") return stageId === "3";
+  if (scope === "active-process") return stageId === "3" || stageId === "2";
+  return true;
+}
+
+async function findBySolution(query) {
+  const resultsEl = document.getElementById("solution-results");
+  if (!query || !query.trim()) {
+    resultsEl.innerHTML = '<div class="empty">Enter a solution above to search.</div>';
+    return;
+  }
+  const scope = (document.querySelector('input[name="scope"]:checked') || {}).value || "completed";
+
+  resultsEl.innerHTML = '<div class="loader"><span class="spinner"></span>Searching OEM database…</div>';
+
+  let matches;
+  let usedClaude = false;
+  if (CLAUDE_API_URL) {
+    try {
+      matches = await claudeMatch(query, scope);
+      usedClaude = true;
+    } catch (e) {
+      console.warn("Claude backend failed, falling back to offline matcher:", e);
+      matches = offlineMatch(query, scope);
+    }
+  } else {
+    matches = offlineMatch(query, scope);
+  }
+
+  if (matches.length === 0) {
+    resultsEl.innerHTML = `<div class="empty">No OEM partners match "<strong>${escapeHtml(query)}</strong>" within the selected scope. Try widening the scope or rephrasing.</div>`;
+    return;
+  }
+  matches.sort((a, b) => {
+    const order = { strong: 0, partial: 1 };
+    return (order[a.match_quality] ?? 2) - (order[b.match_quality] ?? 2);
+  });
+
+  const html = `
+    <div style="margin-bottom: 10px; color: #6b6b6b; font-size: 13px;">
+      <strong>${matches.length}</strong> OEM partner${matches.length !== 1 ? "s" : ""} match "<strong>${escapeHtml(query)}</strong>" — click any card for contacts and quote procedure.
+      ${usedClaude ? `<span style="margin-left:8px;color:#3aa83a;">· Powered by Claude</span>` : `<span style="margin-left:8px;color:#999;">· Offline keyword matcher</span>`}
+    </div>
+    ${matches.map(m => {
+      const t = DATA.tickets.find(x => String(x.id) === String(m.id));
+      if (!t) return "";
+      const stage = STAGE_BY_ID[t.stage];
+      const stagePillCls = !stage ? "pill-grey" :
+        stage.cls === "in-process" ? "pill-amber" :
+        stage.cls === "completed" ? "pill-green" :
+        stage.cls === "rejected" ? "pill-red" : "pill-blue";
+      const qualityPill = m.match_quality === "strong" ? '<span class="pill pill-green">Strong fit</span>' : '<span class="pill pill-amber">Partial fit</span>';
+      return `
+        <div class="match-card" data-id="${t.id}">
+          <div class="match-head">
+            <span class="match-name">${escapeHtml(t.subject)}</span>
+            ${qualityPill}
+            ${stage ? `<span class="pill ${stagePillCls}">${escapeHtml(stage.label)}</span>` : ""}
+            <span style="color:#6b6b6b; font-size:12px; margin-left:auto;">Owner: ${escapeHtml(ownerName(t.owner))}</span>
+          </div>
+          <div class="match-reason"><strong>Why:</strong> ${escapeHtml(m.reason || "")}</div>
+          ${t.content ? `<div class="match-desc">${escapeHtml(t.content)}</div>` : ""}
+        </div>`;
+    }).join("")}
+  `;
+  resultsEl.innerHTML = html;
+  resultsEl.querySelectorAll(".match-card").forEach(el => {
+    el.addEventListener("click", () => openModal(el.dataset.id));
+  });
+}
+
+// =================================================================
+// Wire up
+// =================================================================
+document.querySelectorAll(".top-tab").forEach(tab => {
+  tab.addEventListener("click", () => {
+    document.querySelectorAll(".top-tab").forEach(t => t.classList.remove("active"));
+    document.querySelectorAll(".view").forEach(v => v.classList.remove("active"));
+    tab.classList.add("active");
+    document.getElementById(tab.dataset.view).classList.add("active");
+    try { localStorage.setItem("oem-dashboard-view", tab.dataset.view); } catch (e) {}
+  });
+});
+try {
+  const savedView = localStorage.getItem("oem-dashboard-view");
+  if (savedView) {
+    const t = document.querySelector(`.top-tab[data-view="${savedView}"]`);
+    if (t) t.click();
+  }
+} catch (e) {}
+
+document.getElementById("search").addEventListener("input", () => renderContent());
+document.getElementById("solution-btn").addEventListener("click", () => findBySolution(document.getElementById("solution-input").value));
+document.getElementById("solution-input").addEventListener("keydown", e => { if (e.key === "Enter") findBySolution(document.getElementById("solution-input").value); });
+document.querySelectorAll(".examples .ex").forEach(el => {
+  el.addEventListener("click", () => {
+    const q = el.dataset.q;
+    document.getElementById("solution-input").value = q;
+    findBySolution(q);
+  });
+});
+
+async function load() {
+  try {
+    const resp = await fetch("./data.json");
+    if (!resp.ok) throw new Error("data.json HTTP " + resp.status);
+    DATA = await resp.json();
+    document.getElementById("snapshot-info").textContent = "Snapshot: " + (DATA.snapshotDate || "unknown");
+    document.getElementById("footer").innerHTML =
+      `${DATA.tickets.length} OEM partnerships · snapshot from HubSpot on ${escapeHtml(DATA.snapshotDate || "—")} · ` +
+      `${CLAUDE_API_URL ? "Claude-powered" : "Offline keyword"} solution search`;
+    renderStageCards();
+    renderContent();
+  } catch (e) {
+    console.error(e);
+    document.getElementById("content").innerHTML =
+      `<div class="empty">Failed to load data.json: ${escapeHtml(e.message)}.<br>Make sure data.json is in the same folder as index.html.</div>`;
+  }
+}
+load();
+</script>
+</body>
+</html>
